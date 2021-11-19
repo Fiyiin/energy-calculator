@@ -50,7 +50,7 @@ class Decorations {
   static InputDecoration dropDownDecoration(BuildContext context) {
     final theme = Theme.of(context);
     return InputDecoration(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 2, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 5, vertical: 12),
       filled: theme.brightness == Brightness.dark ? false : true,
       border: const OutlineInputBorder(
         borderRadius: BorderRadius.all(

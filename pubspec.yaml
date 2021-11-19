@@ -24,6 +24,8 @@ dependencies:
   flutter:
     sdk: flutter
   reactive_forms: ^10.2.0
+  tabular: ^0.6.3+1
+  flutter_markdown: ^0.6.8
 
 
   # The following adds the Cupertino Icons font to your application.

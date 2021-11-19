@@ -1,6 +1,8 @@
 import 'package:energy/decorations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:reactive_forms/reactive_forms.dart';
+import 'package:tabular/tabular.dart';
 
 void main() {
   runApp(MyApp());
@@ -16,7 +18,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Energy Calculator',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -73,7 +75,12 @@ class _MyHomePageState extends State<MyHomePage> {
   double duration = 0;
   String unit = 'min';
 
-  List<FormRow> rows = [];
+  bool shouldRefresh = false;
+  List<List<String>> data = [
+    ['Appliance', 'Daily Consumption (KWH)', 'Daily Cost (\u20A6)']
+  ];
+  List<double> consumption = [];
+  List<double> cost = [];
 
   @override
   void initState() {
@@ -105,15 +112,6 @@ class _MyHomePageState extends State<MyHomePage> {
         }
       });
     });
-
-    // rows = [
-    //   FormRow(
-    //     key: UniqueKey(),
-    //     rating: rating,
-    //     duration: duration,
-    //     unit: unit,
-    //   ),
-    // ];
   }
 
   @override
@@ -122,35 +120,151 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: ReactiveFormBuilder(
-        form: () => form,
-        builder: (context, formGroup, child) {
-          return Column(
-            children: [
-              Column(
+      body: SingleChildScrollView(
+        child: ReactiveFormBuilder(
+          form: () => form,
+          builder: (context, formGroup, child) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Column(
                 children: [
-                  FormRow(rating: rating, duration: duration, unit: unit)
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(height: 35),
+                      Text('EKEDC Electricity Tarriff: Band C @ \u20A642/KWH'),
+                      SizedBox(height: 20),
+                      FormRow(rating: rating, duration: duration, unit: unit),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: shouldRefresh
+                                ? null
+                                : () {
+                                    form.markAllAsTouched();
+                                    if (form.valid) {
+                                      final appliance =
+                                          form.control('0.appliance').value;
+                                      final dailyConsumption =
+                                          calcPower(Wh(rating, duration, unit))
+                                              .value;
+                                      final dailyCost =
+                                          calcPower(Wh(rating, duration, unit))
+                                                  .value *
+                                              42;
+
+                                      cost.add(dailyCost);
+                                      consumption.add(dailyConsumption);
+
+                                      setState(() {
+                                        data.add([
+                                          '$appliance',
+                                          dailyConsumption.toStringAsFixed(2),
+                                          dailyCost.toStringAsFixed(2),
+                                        ]);
+                                      });
+
+                                      form
+                                          .control('0.appliance')
+                                          .updateValue('');
+                                      form.control('0.rating').updateValue('');
+                                      form
+                                          .control('0.duration')
+                                          .updateValue('');
+                                    }
+                                  },
+                            style: TextButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4.0),
+                                  side: BorderSide(color: Colors.blue),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16.0,
+                                  horizontal: 40.0,
+                                ),
+                                primary: Colors.blue),
+                            child: Text(
+                              'Next',
+                            ),
+                          ),
+                          const SizedBox(width: 25),
+                          TextButton(
+                            onPressed: () {
+                              form.markAllAsTouched();
+                              if (cost.isNotEmpty && consumption.isNotEmpty) {
+                                final totalCost = cost.reduce(
+                                    (value, element) => value + element);
+                                final totalConsumption = consumption.reduce(
+                                    (value, element) => value + element);
+                                setState(() {
+                                  if (shouldRefresh) {
+                                    cost.clear();
+                                    consumption.clear();
+
+                                    data.removeRange(1, data.length);
+
+                                    shouldRefresh = false;
+                                  } else {
+                                    data.add([
+                                      'Total',
+                                      totalConsumption.toStringAsFixed(2),
+                                      totalCost.toStringAsFixed(2),
+                                    ]);
+                                    shouldRefresh = true;
+                                  }
+                                });
+                              }
+                            },
+                            style: TextButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4.0),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16.0,
+                                horizontal: 40.0,
+                              ),
+                              primary: Colors.white,
+                              backgroundColor: Colors.blue,
+                            ),
+                            child: Text(
+                              shouldRefresh ? 'Restart' : 'Done',
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 30),
+                      AnimatedOpacity(
+                        opacity: data.length < 2 ? 0 : 1,
+                        duration: Duration(milliseconds: 200),
+                        child: MarkdownBody(
+                          data: tabular(data),
+                        ),
+                      ),
+                      SizedBox(height: 50)
+                    ],
+                  ),
+                  // TextButton.icon(
+                  //   onPressed: () {
+                  //     setState(() {
+                  //       rows.add(
+                  //         FormRow(
+                  //           key: UniqueKey(),
+                  //           rating: rating,
+                  //           duration: duration,
+                  //           unit: unit,
+                  //         ),
+                  //       );
+                  //     });
+                  //   },
+                  //   icon: Icon(Icons.add),
+                  //   label: Text('Add'),
+                  // ),
                 ],
               ),
-              // TextButton.icon(
-              //   onPressed: () {
-              //     setState(() {
-              //       rows.add(
-              //         FormRow(
-              //           key: UniqueKey(),
-              //           rating: rating,
-              //           duration: duration,
-              //           unit: unit,
-              //         ),
-              //       );
-              //     });
-              //   },
-              //   icon: Icon(Icons.add),
-              //   label: Text('Add'),
-              // ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -179,64 +293,59 @@ class _FormRowState extends State<FormRow> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        Wrap(
+          // spacing: 5,
+          runSpacing: 10,
+          // crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Text('1'),
             SizedBox(width: 10),
-            Expanded(
-              child: ReactiveTextField(
-                formControlName: '0.appliance',
-                decoration: Decorations.formInputDecoration(context)
-                    .copyWith(labelText: 'Appliance'),
-              ),
+            ReactiveTextField(
+              formControlName: '0.appliance',
+              decoration: Decorations.formInputDecoration(context)
+                  .copyWith(labelText: 'Appliance'),
             ),
-            SizedBox(width: 20),
-            Expanded(
-              child: ReactiveTextField(
-                formControlName: '0.rating',
-                keyboardType: TextInputType.number,
-                decoration: Decorations.formInputDecoration(context).copyWith(
-                  labelText: 'Power Rating',
-                  suffixIcon: Padding(
-                    padding: const EdgeInsets.only(top: 10.0),
-                    child: Tooltip(
-                      message: 'Power rating in Watts',
-                      child: Text(
-                        'W',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
+            SizedBox(height: 20),
+            ReactiveTextField(
+              formControlName: '0.rating',
+              keyboardType: TextInputType.number,
+              decoration: Decorations.formInputDecoration(context).copyWith(
+                labelText: 'Power Rating',
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(top: 10.0),
+                  child: Tooltip(
+                    message: 'Power rating in Watts',
+                    child: Text(
+                      'W',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
               ),
             ),
-            SizedBox(width: 20),
-            Expanded(
-              child: ReactiveTextField(
-                formControlName: '0.duration',
-                keyboardType: TextInputType.number,
-                decoration: Decorations.formInputDecoration(context).copyWith(
-                  labelText: 'Duration',
-                  suffixIcon: Tooltip(
-                    message: 'how long the appliance works',
-                    child: SizedBox(
-                      width: 60,
-                      child: ReactiveDropdownField(
-                        decoration: Decorations.dropDownDecoration(context),
-                        formControlName: '0.unit',
-                        validationMessages: (control) => {
-                          ValidationMessage.required: 'this a required field'
-                        },
-                        items: data.map<DropdownMenuItem<String>>((value) {
-                          return DropdownMenuItem(
-                            child: Center(
-                              child: Text(value),
-                            ),
-                            value: value,
-                          );
-                        }).toList(),
-                      ),
+            SizedBox(height: 20),
+            ReactiveTextField(
+              formControlName: '0.duration',
+              keyboardType: TextInputType.number,
+              decoration: Decorations.formInputDecoration(context).copyWith(
+                labelText: 'Duration',
+                suffixIcon: Tooltip(
+                  message: 'how long the appliance works',
+                  child: SizedBox(
+                    width: 70,
+                    child: ReactiveDropdownField(
+                      decoration: Decorations.dropDownDecoration(context),
+                      formControlName: '0.unit',
+                      validationMessages: (control) =>
+                          {ValidationMessage.required: 'this a required field'},
+                      items: data.map<DropdownMenuItem<String>>((value) {
+                        return DropdownMenuItem(
+                          child: Center(
+                            child: Text(value),
+                          ),
+                          value: value,
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
@@ -245,10 +354,12 @@ class _FormRowState extends State<FormRow> {
           ],
         ),
         SizedBox(height: 10),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Wrap(
+          alignment: WrapAlignment.center,
+          // mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Row(
+            Wrap(
+              // mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Daily Power Consumption: '),
                 Text(
@@ -256,11 +367,12 @@ class _FormRowState extends State<FormRow> {
               ],
             ),
             SizedBox(width: 30),
-            Row(
+            Wrap(
+              // mainAxisSize: MainAxisSize.min,
               children: [
                 Text('Daily Cost: '),
                 Text(
-                    '\u20A6 ${(calcPower(Wh(widget.rating, widget.duration, widget.unit)).value * 49).toStringAsFixed(2)}'),
+                    '\u20A6 ${(calcPower(Wh(widget.rating, widget.duration, widget.unit)).value * 42).toStringAsFixed(2)}'),
               ],
             ),
           ],
