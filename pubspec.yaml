@@ -1,5 +1,5 @@
-name: energy
-description: A new Flutter project.
+name: energy_calculator
+description: A simple app to calculate your daily energy consumption and cost
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.

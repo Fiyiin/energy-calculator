@@ -1,8 +1,9 @@
-import 'package:energy/decorations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:reactive_forms/reactive_forms.dart';
 import 'package:tabular/tabular.dart';
+
+import 'decorations.dart';
 
 void main() {
   runApp(MyApp());
